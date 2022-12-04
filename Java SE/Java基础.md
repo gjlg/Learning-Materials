@@ -4,9 +4,9 @@
 
 :notebook:&emsp;什么是面向对象(OOP)？一切皆对象,面向过程是具体化的面向对象,面向对象是模型化的面向过程。
 
-#### **1.面向对象三大特性**
+### **1.面向对象三大特性**
 
-##### :one:封装
+#### 1.1 封装
 
 利用抽象数据类型将数据和基于数据的操作封装在一起，使其构成一个不可分割的独立实体。数据被保护在抽象数据类型的内部，尽可能地隐藏内部的细节，只保留一些对外接口使之与外部发生联系。用户无需知道对象内部的细节，但可以通过对象对外提供的接口来访问该对象。封装隐藏对象的属性和实现细节，仅对外提供公共访问方式，将变化隔离、便于使用，提高复用性和安全性。
 
@@ -18,7 +18,7 @@
 - 提高软件的可重用性
 - 降低了构建大型系统的风险: 即使整个系统不可用，但是这些独立的模块却有可能是可用的
 
-##### :two:继承
+#### 1.2 继承
 
 继承实现了`IS-A`关系，例如 Cat 和 Animal 就是一种 IS-A 关系，因此 Cat 可以继承自 Animal，从而获得 Animal 非 private 的属性和方法。
 
@@ -26,9 +26,11 @@
 
 Cat 可以当做 Animal 来使用，也就是说可以使用 Animal 引用 Cat 对象。父类引用指向子类对象称为`向上转型` 。
 
-`Animal animal = new Cat();`
+```java
+Animal animal = new Cat();
+```
 
-##### :three:多态
+#### 1.3 多态
 
 多态分为`编译时多态`和`运行时多态`:
 
@@ -41,53 +43,63 @@ Cat 可以当做 Animal 来使用，也就是说可以使用 Animal 引用 Cat �
 - 覆盖(重写)
 - 向上转型
 
-#### **2.面向对象五大原则:**
+### **2.面向对象五大原则:**
 
-##### :one:单一职责
+#### 2.1 单一职责
 
 类的功能要单一，一个类只实现一个功能。
 
-##### :two:开放封闭
+#### 2.2 开放封闭
 
 一个模块对于拓展是开放的，对于修改是封闭的。
 
-##### :three:里氏替换
+#### 2.3 里氏替换
 
 子类可以替换父类出现在父类能够出现的任何地方。
 
-##### :four:依赖倒置
+#### 2.4 依赖倒置
 
 高层次的模块不应该依赖于低层次的模块，他们都应该依赖于抽象。抽象不应该依赖于具体实现，具体实现应该依赖于抽象。
 
-##### :five:接口分离
+#### 2.5 接口分离
 
 设计时采用多个与特定客户类有关的接口比采用一个通用的接口要好。
 
-#### 3.类图关系
+### 3.类图关系
 
 :walking:类图可以使用 [PlantUML (opens new window)](https://www.planttext.com/)绘制，更多语法及使用: http://plantuml.com/ 。
 
-##### :one:泛化关系 (Generalization)
+#### 3.1 泛化关系 (Generalization)
 
 用来描述继承关系，在 Java 中使用 extends 关键字。
 
-##### :two:实现关系 (Realization)
+![img](./assets/SoWkIImgAStDuU8goIp9ILLmJyrBBKh-20221130093446674.png)
+
+#### 3.2 实现关系 (Realization)
 
 用来实现一个接口，在 Java 中使用 implement 关键字。
 
-##### :three:聚合关系 (Aggregation)
+![img](./assets/SoWkIImgAStDuU8goIp9ILK8IatCoQn.png)
+
+#### 3.3 聚合关系 (Aggregation)
 
 表示整体由部分组成，但是整体和部分不是强依赖的，整体不存在了部分还是会存在。
 
-##### :four:组合关系 (Composition)
+![img](./assets/SoWkIImgAStDuU8goIp9ILLmJ4ylIar.png)
+
+#### 3.4 组合关系 (Composition)
 
 和聚合不同，组合中整体和部分是强依赖的，整体不存在了部分也不存在了。比如公司和部门，公司没了部门就不存在了。但是公司和员工就属于聚合关系了，因为公司没了员工还在。
 
-##### :five:关联关系 (Association)
+![img](./assets/SoWkIImgAStDuU8goIp9ILLmpiyjo2_.png)
+
+#### 3.5 关联关系 (Association)
 
 表示不同类对象之间有关联，这是一种静态关系，与运行过程的状态无关，在最开始就可以确定。因此也可以用 1 对 1、多对 1、多对多这种关联关系来表示。比如学生和学校就是一种关联关系，一个学校可以有很多学生，但是一个学生只属于一个学校，因此这是一种多对一的关系，在运行开始之前就可以确定。
 
-##### :six:依赖关系 (Dependency)
+![img](./assets/SoWkIImgAStDuU8goIp9ILLmB2xEJyv.png)
+
+#### 3.6 依赖关系 (Dependency)
 
 和关联关系不同的是，依赖关系是在运行过程中起作用的。A 类和 B 类是依赖关系主要有三种形式:
 
@@ -95,9 +107,23 @@ Cat 可以当做 Animal 来使用，也就是说可以使用 Animal 引用 Cat �
 - A 类是 B 类方法当中的一个参数；
 - A 类向 B 类发送消息，从而影响 B 类发生变化；
 
-#### 4.耦合
+![img](./assets/LOun2W9134NxVugmbJPp15d4LalxC4O.png)
+
+### 4.耦合
 
 高内聚，低耦合.
+
+### 5.参考资料
+
+- Java 编程思想
+- 敏捷软件开发: 原则、模式与实践
+- [面向对象设计的 SOLID 原则在新窗口打开](http://www.cnblogs.com/shanyou/archive/2009/09/21/1570716.html)
+- [看懂 UML 类图和时序图在新窗口打开](http://design-patterns.readthedocs.io/zh_CN/latest/read_uml.html#generalization)
+- [UML 系列——时序图(顺序图)sequence diagram在新窗口打开](http://www.cnblogs.com/wolf-sun/p/UML-Sequence-diagram.html)
+- [面向对象编程三大特性 ------ 封装、继承、多态在新窗口打开](http://blog.csdn.net/jianyuerensheng/article/details/51602015)
+- javaoop基础知识总结 https://blog.csdn.net/weixin_38173324/article/details/70037927
+- Java实现OOP(面向对象编程) https://www.cnblogs.com/AlanLee/p/6475334.html
+- Java 抽象类与oop三大特征 http://www.cnblogs.com/wujing-hubei/p/6012105.html
 
 ## Java基础-知识点
 
