@@ -252,20 +252,214 @@ volatile 变量通过这样的机制就使得每个线程都能获得该变量�
 
 #### volatile 的 happens-before 关系
 
+happens-before 规则中有一条是 volatile 变量规则：对一个 volatile 域的写，happens-before 于任意后续对这个 volatile 域的读。
+
+```java
+//假设线程A执行writer方法，线程B执行reader方法
+class VolatileExample {
+    int a = 0;
+    volatile boolean flag = false;
+    
+    public void writer() {
+        a = 1;              // 1 线程A修改共享变量
+        flag = true;        // 2 线程A写volatile变量
+    } 
+    
+    public void reader() {
+        if (flag) {         // 3 线程B读同一个volatile变量
+        int i = a;          // 4 线程B读共享变量
+        ……
+        }
+    }
+}
+```
+
+根据 happens-before 规则，上面过程会建立 3 类 happens-before 关系。
+
+- 根据程序次序规则：1 happens-before 2 且 3 happens-before 4。
+- 根据 volatile 规则：2 happens-before 3。
+- 根据 happens-before 的传递性规则：1 happens-before 4。
+
+![img](./assets/java-thread-x-key-volatile-1.png)
+
+因为以上规则，当线程 A 将 volatile 变量 flag 更改为 true 后，线程 B 能够迅速感知。
+
 #### volatile 禁止重排序
+
+为了性能优化，JMM 在不改变正确语义的前提下，会允许编译器和处理器对指令序列进行重排序。JMM 提供了内存屏障阻止这种重排序。
+
+Java 编译器会在生成指令系列时在适当的位置会插入内存屏障指令来禁止特定类型的处理器重排序。
+
+JMM 会针对编译器制定 volatile 重排序规则表。
+
+![img](./assets/java-thread-x-key-volatile-2.png)
+
+" NO " 表示禁止重排序。
+
+为了实现 volatile 内存语义时，编译器在生成字节码时，会在指令序列中插入内存屏障来禁止特定类型的处理器重排序。
+
+对于编译器来说，发现一个最优布置来最小化插入屏障的总数几乎是不可能的，为此，JMM 采取了保守的策略。
+
+- 在每个 volatile 写操作的前面插入一个 StoreStore 屏障。
+- 在每个 volatile 写操作的后面插入一个 StoreLoad 屏障。
+- 在每个 volatile 读操作的后面插入一个 LoadLoad 屏障。
+- 在每个 volatile 读操作的后面插入一个 LoadStore 屏障。
+
+volatile 写是在前面和后面分别插入内存屏障，而 volatile 读操作是在后面插入两个内存屏障。
+
+| 内存屏障        | 说明                                                        |
+| --------------- | ----------------------------------------------------------- |
+| StoreStore 屏障 | 禁止上面的普通写和下面的 volatile 写重排序。                |
+| StoreLoad 屏障  | 防止上面的 volatile 写与下面可能有的 volatile 读/写重排序。 |
+| LoadLoad 屏障   | 禁止下面所有的普通读操作和上面的 volatile 读重排序。        |
+| LoadStore 屏障  | 禁止下面所有的普通写操作和上面的 volatile 读重排序。        |
+
+![img](./assets/java-thread-x-key-volatile-3.png)
+
+![img](./assets/java-thread-x-key-volatile-4.png)
 
 ## volatile 的应用场景
 
+使用 volatile 必须具备的条件
+
+- 对变量的写操作不依赖于当前值。
+- 该变量没有包含在具有其他变量的不变式中。
+- 只有在状态真正独立于程序内其他内容时才能使用 volatile。
+
 ### 模式1：状态标志
+
+也许实现 volatile 变量的规范使用仅仅是使用一个布尔状态标志，用于指示发生了一个重要的一次性事件，例如完成初始化或请求停机。
+
+```java
+volatile boolean shutdownRequested;
+......
+public void shutdown() { shutdownRequested = true; }
+public void doWork() { 
+    while (!shutdownRequested) { 
+        // do stuff
+    }
+}
+```
 
 ### 模式2：一次性安全发布(one-time safe publication)
 
+缺乏同步会导致无法实现可见性，这使得确定何时写入对象引用而不是原始值变得更加困难。在缺乏同步的情况下，可能会遇到某个对象引用的更新值(由另一个线程写入)和该对象状态的旧值同时存在。(这就是造成著名的双重检查锁定(double-checked-locking)问题的根源，其中对象引用在没有同步的情况下进行读操作，产生的问题是您可能会看到一个更新的引用，但是仍然会通过该引用看到不完全构造的对象)。
+
+```java
+public class BackgroundFloobleLoader {
+    public volatile Flooble theFlooble;
+ 
+    public void initInBackground() {
+        // do lots of stuff
+        theFlooble = new Flooble();  // this is the only write to theFlooble
+    }
+}
+ 
+public class SomeOtherClass {
+    public void doWork() {
+        while (true) { 
+            // do some stuff...
+            // use the Flooble, but only if it is ready
+            if (floobleLoader.theFlooble != null) 
+                doSomething(floobleLoader.theFlooble);
+        }
+    }
+}
+```
+
 ### 模式3：独立观察(independent observation)
+
+安全使用 volatile 的另一种简单模式是定期 发布 观察结果供程序内部使用。例如，假设有一种环境传感器能够感觉环境温度。一个后台线程可能会每隔几秒读取一次该传感器，并更新包含当前文档的 volatile 变量。然后，其他线程可以读取这个变量，从而随时能够看到最新的温度值。
+
+```java
+public class UserManager {
+    public volatile String lastUser;
+ 
+    public boolean authenticate(String user, String password) {
+        boolean valid = passwordIsValid(user, password);
+        if (valid) {
+            User u = new User();
+            activeUsers.add(u);
+            lastUser = user;
+        }
+        return valid;
+    }
+}
+```
 
 ### 模式4：volatile bean 模式
 
+在 volatile bean 模式中，JavaBean 的所有数据成员都是 volatile 类型的，并且 getter 和 setter 方法必须非常普通 —— 除了获取或设置相应的属性外，不能包含任何逻辑。此外，对于对象引用的数据成员，引用的对象必须是有效不可变的。(这将禁止具有数组值的属性，因为当数组引用被声明为 volatile 时，只有引用而不是数组本身具有 volatile 语义)。对于任何 volatile 变量，不变式或约束都不能包含 JavaBean 属性。
+
+```java
+@ThreadSafe
+public class Person {
+    private volatile String firstName;
+    private volatile String lastName;
+    private volatile int age;
+ 
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public int getAge() { return age; }
+ 
+    public void setFirstName(String firstName) { 
+        this.firstName = firstName;
+    }
+ 
+    public void setLastName(String lastName) { 
+        this.lastName = lastName;
+    }
+ 
+    public void setAge(int age) { 
+        this.age = age;
+    }
+}
+```
+
 ### 模式5：开销较低的读－写锁策略
+
+volatile 的功能还不足以实现计数器。因为 ++x 实际上是三种操作(读、添加、存储)的简单组合，如果多个线程凑巧试图同时对 volatile 计数器执行增量操作，那么它的更新值有可能会丢失。 如果读操作远远超过写操作，可以结合使用内部锁和 volatile 变量来减少公共代码路径的开销。 安全的计数器使用 synchronized 确保增量操作是原子的，并使用 volatile 保证当前结果的可见性。如果更新不频繁的话，该方法可实现更好的性能，因为读路径的开销仅仅涉及 volatile 读操作，这通常要优于一个无竞争的锁获取的开销。
+
+```java
+@ThreadSafe
+public class CheesyCounter {
+    // Employs the cheap read-write lock trick
+    // All mutative operations MUST be done with the 'this' lock held
+    @GuardedBy("this") private volatile int value;
+ 
+    public int getValue() { return value; }
+ 
+    public synchronized int increment() {
+        return value++;
+    }
+}
+```
 
 ### 模式6：双重检查(double-checked)
 
+就是我们上文举的例子。
+
+单例模式的一种实现方式，但很多人会忽略 volatile 关键字，因为没有该关键字，程序也可以很好的运行，只不过代码的稳定性总不是 100%，说不定在未来的某个时刻，隐藏的 bug 就出来了。
+
+```java
+class Singleton {
+    private volatile static Singleton instance;
+    private Singleton() {
+    }
+    public static Singleton getInstance() {
+        if (instance == null) {
+            syschronized(Singleton.class) {
+                if (instance == null) {
+                    instance = new Singleton();
+                }
+            }
+        }
+        return instance;
+    } 
+}
+```
+
 ## 参考文章
+
+- https://blog.csdn.net/devotion987/article/details/68486942
+- https://www.jianshu.com/p/ccfe24b63d87
